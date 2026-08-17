@@ -12,6 +12,7 @@ const NAV_ITEMS = [
     href: "/dashboard",
     label: "Dashboard",
     description: "Statistik semua akun",
+    adminOnly: false,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -23,11 +24,24 @@ const NAV_ITEMS = [
     href: "/accounts",
     label: "Akun",
     description: "Kelola akun sosial media",
+    adminOnly: false,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
         <circle cx="9" cy="7" r="4"/>
         <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+      </svg>
+    ),
+  },
+  {
+    href: "/settings/users",
+    label: "Users",
+    description: "Kelola pengguna sistem",
+    adminOnly: true,
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
       </svg>
     ),
   },
@@ -67,7 +81,7 @@ export default function Sidebar({ session }: Props) {
         <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", color: "#334155", textTransform: "uppercase", padding: "0 12px", margin: "0 0 6px" }}>
           Menu
         </p>
-        {NAV_ITEMS.map((item) => (
+        {NAV_ITEMS.filter(item => !item.adminOnly || session.role === "ADMIN").map((item) => (
           <Link
             key={item.href}
             href={item.href}
