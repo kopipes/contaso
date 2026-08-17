@@ -5,6 +5,8 @@ import Sidebar from "@/app/components/Sidebar";
 import AutoRefresh from "@/app/components/AutoRefresh";
 import SyncButton from "@/app/components/SyncButton";
 
+import type { ReplizContent } from "@/lib/repliz";
+
 const PLATFORM_CONFIG: Record<string, { label: string; gradient: string }> = {
   instagram: { label: "Instagram", gradient: "135deg, #ec4899, #8b5cf6" },
   facebook:  { label: "Facebook",  gradient: "135deg, #3b82f6, #1d4ed8" },
@@ -21,7 +23,7 @@ export default async function DashboardPage() {
   const accounts = await db.trackedAccount.findMany({
     where: { isVisible: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    include: { statsCache: true },
+    include: { statsCache: true, contentCache: true },
   });
 
   const totalAccounts = accounts.length;
@@ -68,6 +70,14 @@ export default async function DashboardPage() {
                 const platform = PLATFORM_CONFIG[acc.platform] ?? { label: acc.platform, gradient: "135deg, #64748b, #334155" };
                 const stats = acc.statsCache ? JSON.parse(acc.statsCache.data) as Record<string, unknown> : null;
                 const cachedAt = acc.statsCache?.cachedAt;
+
+                // Latest post date from content cache
+                const contents = acc.contentCache ? JSON.parse(acc.contentCache.data) as ReplizContent[] : [];
+                const latestPost = contents.reduce<string | null>((latest, c) => {
+                  if (!c.createdAt) return latest;
+                  if (!latest) return c.createdAt;
+                  return c.createdAt > latest ? c.createdAt : latest;
+                }, null);
 
                 const statItems = [
                   { label: "Reach",        value: stats?.reach },
@@ -154,6 +164,25 @@ export default async function DashboardPage() {
                         ))}
                       </div>
                     )}
+
+                    {/* Latest post date */}
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "8px 20px",
+                      borderTop: "1px solid #f1f5f9",
+                      background: "#fafafa",
+                    }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                      </svg>
+                      <span style={{ fontSize: 11, color: "#94a3b8" }}>Post terakhir:</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: latestPost ? "#475569" : "#cbd5e1" }}>
+                        {latestPost
+                          ? new Date(latestPost).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+                          : "—"
+                        }
+                      </span>
+                    </div>
                   </div>
                 );
               })}
