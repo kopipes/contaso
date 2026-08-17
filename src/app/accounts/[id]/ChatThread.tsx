@@ -240,6 +240,7 @@ export default function ChatThread({ chat, accountId, onClose }: Props) {
   const [messages, setMessages] = useState<ReplizMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [headerAvatarError, setHeaderAvatarError] = useState(false);
   const [, startTransition] = useTransition();
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -300,9 +301,10 @@ export default function ChatThread({ chat, accountId, onClose }: Props) {
           background: "#ffffff",
           flexShrink: 0,
         }}>
-          {chat.senderPicture ? (
+          {chat.senderPicture && !headerAvatarError ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={chat.senderPicture} alt={chat.senderName} referrerPolicy="no-referrer"
+              onError={() => setHeaderAvatarError(true)}
               style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid #e2e8f0" }} />
           ) : (
             <div style={{

@@ -5,7 +5,7 @@ import { sendChatAction, type ReplyState } from "@/app/actions/replies";
 import type { ReplizChat } from "@/lib/repliz";
 import ChatThread from "./ChatThread";
 
-type Props = { accountId: string; chats: ReplizChat[]; unavailable: boolean };
+type Props = { accountId: string; chats: ReplizChat[]; unavailable: boolean; repliedIds: Set<string> };
 
 const MESSAGE_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string; preview: string }> = {
   text:          { label: "DM Langsung",    color: "#2563eb", bg: "#eff6ff",  icon: "💬", preview: "" },
@@ -23,8 +23,9 @@ function getOriginConfig(type: string) {
   return MESSAGE_TYPE_CONFIG[type] ?? { label: type, color: "#64748b", bg: "#f8fafc", icon: "💬" };
 }
 
-function ChatItem({ chat, accountId, onOpenThread }: { chat: ReplizChat; accountId: string; onOpenThread: (chat: ReplizChat) => void }) {
+function ChatItem({ chat, accountId, onOpenThread, isReplied }: { chat: ReplizChat; accountId: string; onOpenThread: (chat: ReplizChat) => void; isReplied: boolean }) {
   const [open, setOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const boundAction = sendChatAction.bind(null, accountId, chat._id);
   const [state, formAction, isPending] = useActionState<ReplyState, FormData>(boundAction, {});
   const msgType = chat.lastMessage?.type ?? "text";
@@ -34,9 +35,10 @@ function ChatItem({ chat, accountId, onOpenThread }: { chat: ReplizChat; account
     <div style={{ padding: "14px 0", borderBottom: "1px solid #f1f5f9", minWidth: 0, overflow: "hidden" }}>
       <div style={{ display: "flex", gap: 10, alignItems: "flex-start", minWidth: 0 }}>
         {/* Avatar */}
-        {chat.senderPicture ? (
+        {chat.senderPicture && !avatarError ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={chat.senderPicture} alt={chat.senderName} referrerPolicy="no-referrer"
+            onError={() => setAvatarError(true)}
             style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid #e2e8f0" }} />
         ) : (
           <div style={{
@@ -65,6 +67,16 @@ function ChatItem({ chat, accountId, onOpenThread }: { chat: ReplizChat; account
                   padding: "0 5px", flexShrink: 0,
                 }}>
                   {chat.unreadCount > 9 ? "9+" : chat.unreadCount}
+                </span>
+              )}
+              {(isReplied || state.success) && (
+                <span style={{
+                  fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 999,
+                  background: "#dcfce7", color: "#16a34a", border: "1px solid #bbf7d0",
+                  display: "inline-flex", alignItems: "center", gap: 3, flexShrink: 0,
+                }}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+                  Dibalas
                 </span>
               )}
             </div>
@@ -196,13 +208,15 @@ function groupByType(chats: ReplizChat[]): ChatGroup[] {
   });
 }
 
-function ChatGroupCard({ group, accountId, defaultOpen, onOpenThread }: {
+function ChatGroupCard({ group, accountId, defaultOpen, onOpenThread, repliedIds }: {
   group: ChatGroup; accountId: string; defaultOpen: boolean;
   onOpenThread: (chat: ReplizChat) => void;
+  repliedIds: Set<string>;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const cfg = getOriginConfig(group.type);
   const totalUnread = group.chats.reduce((n, c) => n + (c.unreadCount ?? 0), 0);
+  const repliedCount = group.chats.filter(c => repliedIds.has(c._id)).length;
 
   return (
     <div style={{ border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
@@ -236,6 +250,16 @@ function ChatGroupCard({ group, accountId, defaultOpen, onOpenThread }: {
               {totalUnread} belum dibaca
             </span>
           )}
+          {repliedCount > 0 && (
+            <span style={{
+              fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
+              background: "#dcfce7", color: "#16a34a", border: "1px solid #bbf7d0",
+              whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 3,
+            }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+              {repliedCount}/{group.chats.length} dibalas
+            </span>
+          )}
         </div>
 
         <svg style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 200ms", color: "#94a3b8" }}
@@ -247,7 +271,7 @@ function ChatGroupCard({ group, accountId, defaultOpen, onOpenThread }: {
       {open && (
         <div style={{ padding: "0 16px", background: "#ffffff", overflow: "hidden" }}>
           {group.chats.map((c) => (
-            <ChatItem key={c._id} chat={c} accountId={accountId} onOpenThread={onOpenThread} />
+            <ChatItem key={c._id} chat={c} accountId={accountId} onOpenThread={onOpenThread} isReplied={repliedIds.has(c._id)} />
           ))}
         </div>
       )}
@@ -257,7 +281,7 @@ function ChatGroupCard({ group, accountId, defaultOpen, onOpenThread }: {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-export default function ChatTab({ accountId, chats, unavailable }: Props) {
+export default function ChatTab({ accountId, chats, unavailable, repliedIds }: Props) {
   const [activeThread, setActiveThread] = useState<ReplizChat | null>(null);
 
   if (unavailable) {
@@ -292,6 +316,7 @@ export default function ChatTab({ accountId, chats, unavailable }: Props) {
           <ChatGroupCard
             key={g.type} group={g} accountId={accountId}
             defaultOpen={i === 0} onOpenThread={setActiveThread}
+            repliedIds={repliedIds}
           />
         ))}
       </div>

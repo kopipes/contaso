@@ -44,10 +44,11 @@ export default async function AccountDetailPage({ params, searchParams }: Props)
 
   // Komentar yang sudah dibalas via Contaso
   const repliedLogs = await db.replyLog.findMany({
-    where: { trackedAccountId: account.id, type: "comment" },
-    select: { externalId: true },
+    where: { trackedAccountId: account.id, type: { in: ["comment", "chat"] } },
+    select: { externalId: true, type: true },
   });
-  const repliedCommentIds = new Set(repliedLogs.map(r => r.externalId));
+  const repliedCommentIds = new Set(repliedLogs.filter(r => r.type === "comment").map(r => r.externalId));
+  const repliedChatIds = new Set(repliedLogs.filter(r => r.type === "chat").map(r => r.externalId));
   const cachedAt = account.statsCache?.cachedAt ?? account.commentsCache?.cachedAt;
   const statsError = !stats;
 
@@ -164,7 +165,7 @@ export default async function AccountDetailPage({ params, searchParams }: Props)
             {/* Tab content */}
             <div style={{ padding: 20, overflow: "hidden", maxWidth: "100%" }}>
               {tab === "comments" && <CommentsTab accountId={account.id} comments={comments} repliedIds={repliedCommentIds} />}
-              {tab === "chat" && <ChatTab accountId={account.id} chats={chats} unavailable={false} />}
+              {tab === "chat" && <ChatTab accountId={account.id} chats={chats} unavailable={false} repliedIds={repliedChatIds} />}
               {tab === "content" && <ContentTab contents={contents} />}
             </div>
           </div>
