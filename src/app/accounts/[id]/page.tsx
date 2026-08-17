@@ -41,6 +41,13 @@ export default async function AccountDetailPage({ params, searchParams }: Props)
   const comments = account.commentsCache ? JSON.parse(account.commentsCache.data) as ReplizComment[] : [];
   const chats = account.chatsCache ? JSON.parse(account.chatsCache.data) as ReplizChat[] : [];
   const contents = account.contentCache ? JSON.parse(account.contentCache.data) as ReplizContent[] : [];
+
+  // Komentar yang sudah dibalas via Contaso
+  const repliedLogs = await db.replyLog.findMany({
+    where: { trackedAccountId: account.id, type: "comment" },
+    select: { externalId: true },
+  });
+  const repliedCommentIds = new Set(repliedLogs.map(r => r.externalId));
   const cachedAt = account.statsCache?.cachedAt ?? account.commentsCache?.cachedAt;
   const statsError = !stats;
 
@@ -156,7 +163,7 @@ export default async function AccountDetailPage({ params, searchParams }: Props)
 
             {/* Tab content */}
             <div style={{ padding: 20, overflow: "hidden", maxWidth: "100%" }}>
-              {tab === "comments" && <CommentsTab accountId={account.id} comments={comments} />}
+              {tab === "comments" && <CommentsTab accountId={account.id} comments={comments} repliedIds={repliedCommentIds} />}
               {tab === "chat" && <ChatTab accountId={account.id} chats={chats} unavailable={false} />}
               {tab === "content" && <ContentTab contents={contents} />}
             </div>

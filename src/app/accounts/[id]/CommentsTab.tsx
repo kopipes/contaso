@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { replyCommentAction, type ReplyState } from "@/app/actions/replies";
 import type { ReplizComment } from "@/lib/repliz";
 
-type Props = { accountId: string; comments: ReplizComment[] };
+type Props = { accountId: string; comments: ReplizComment[]; repliedIds: Set<string> };
 
 const CONTENT_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   video:    { label: "Video",    color: "#7c3aed" },
@@ -36,7 +36,7 @@ function groupByPost(comments: ReplizComment[]): PostGroup[] {
   return Array.from(map.values());
 }
 
-function CommentItem({ comment, accountId }: { comment: ReplizComment; accountId: string }) {
+function CommentItem({ comment, accountId, isReplied }: { comment: ReplizComment; accountId: string; isReplied: boolean }) {
   const [open, setOpen] = useState(false);
   const boundAction = replyCommentAction.bind(null, accountId, comment._id);
   const [state, formAction, isPending] = useActionState<ReplyState, FormData>(boundAction, {});
@@ -59,13 +59,23 @@ function CommentItem({ comment, accountId }: { comment: ReplizComment; accountId
         </div>
         <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{comment.comment.owner.name}</span>
               <span style={{ fontSize: 11, color: "#cbd5e1" }}>
                 {new Date(comment.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
               </span>
+              {(isReplied || state.success) && (
+                <span style={{
+                  fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 999,
+                  background: "#dcfce7", color: "#16a34a", border: "1px solid #bbf7d0",
+                  display: "flex", alignItems: "center", gap: 3,
+                }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+                  Sudah dibalas
+                </span>
+              )}
             </div>
-            {!state.success && (
+            {!state.success && !isReplied && (
               <button onClick={() => setOpen(v => !v)} style={{
                 fontSize: 12, fontWeight: 500, color: "#4f46e5",
                 background: open ? "#eef2ff" : "transparent",
@@ -74,6 +84,17 @@ function CommentItem({ comment, accountId }: { comment: ReplizComment; accountId
                 transition: "all 150ms", flexShrink: 0,
               }}>
                 {open ? "Batal" : "Balas"}
+              </button>
+            )}
+            {!state.success && isReplied && (
+              <button onClick={() => setOpen(v => !v)} style={{
+                fontSize: 12, fontWeight: 500, color: "#64748b",
+                background: open ? "#f1f5f9" : "transparent",
+                border: "1px solid " + (open ? "#e2e8f0" : "transparent"),
+                borderRadius: 6, padding: "3px 10px", cursor: "pointer",
+                transition: "all 150ms", flexShrink: 0,
+              }}>
+                {open ? "Batal" : "Balas lagi"}
               </button>
             )}
           </div>
@@ -115,10 +136,11 @@ function CommentItem({ comment, accountId }: { comment: ReplizComment; accountId
   );
 }
 
-function PostGroupCard({ group, accountId, defaultOpen }: { group: PostGroup; accountId: string; defaultOpen: boolean }) {
+function PostGroupCard({ group, accountId, defaultOpen, repliedIds }: { group: PostGroup; accountId: string; defaultOpen: boolean; repliedIds: Set<string> }) {
   const [open, setOpen] = useState(defaultOpen);
   const [thumbError, setThumbError] = useState(false);
   const cfg = CONTENT_TYPE_CONFIG[group.contentType] ?? { label: group.contentType, color: "#64748b" };
+  const repliedCount = group.comments.filter(c => repliedIds.has(c._id)).length;
 
   return (
     <div style={{ border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", width: "100%", maxWidth: "100%", boxSizing: "border-box" }}>
@@ -153,6 +175,16 @@ function PostGroupCard({ group, accountId, defaultOpen }: { group: PostGroup; ac
             <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: "#f1f5f9", color: "#475569" }}>
               {group.comments.length} komentar
             </span>
+            {repliedCount > 0 && (
+              <span style={{
+                fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
+                background: "#dcfce7", color: "#16a34a", border: "1px solid #bbf7d0",
+                display: "flex", alignItems: "center", gap: 3,
+              }}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+                {repliedCount}/{group.comments.length} dibalas
+              </span>
+            )}
             {group.url && (
               <a href={group.url} target="_blank" rel="noopener noreferrer"
                 onClick={e => e.stopPropagation()}
@@ -177,7 +209,7 @@ function PostGroupCard({ group, accountId, defaultOpen }: { group: PostGroup; ac
         <div style={{ padding: "0 16px", background: "#ffffff" }}>
           {group.comments.map((c, i) => (
             <div key={c._id} style={{ borderBottom: i < group.comments.length - 1 ? undefined : "none" }}>
-              <CommentItem comment={c} accountId={accountId} />
+              <CommentItem comment={c} accountId={accountId} isReplied={repliedIds.has(c._id)} />
             </div>
           ))}
         </div>
@@ -186,7 +218,7 @@ function PostGroupCard({ group, accountId, defaultOpen }: { group: PostGroup; ac
   );
 }
 
-export default function CommentsTab({ accountId, comments }: Props) {
+export default function CommentsTab({ accountId, comments, repliedIds }: Props) {
   if (comments.length === 0) {
     return (
       <div style={{ textAlign: "center", padding: "48px 20px" }}>
@@ -203,7 +235,7 @@ export default function CommentsTab({ accountId, comments }: Props) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {groups.map((g, i) => (
-        <PostGroupCard key={g.contentId} group={g} accountId={accountId} defaultOpen={i === 0} />
+        <PostGroupCard key={g.contentId} group={g} accountId={accountId} defaultOpen={i === 0} repliedIds={repliedIds} />
       ))}
     </div>
   );
