@@ -117,6 +117,7 @@ function CommentItem({ comment, accountId }: { comment: ReplizComment; accountId
 
 function PostGroupCard({ group, accountId, defaultOpen }: { group: PostGroup; accountId: string; defaultOpen: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [thumbError, setThumbError] = useState(false);
   const cfg = CONTENT_TYPE_CONFIG[group.contentType] ?? { label: group.contentType, color: "#64748b" };
 
   return (
@@ -134,9 +135,9 @@ function PostGroupCard({ group, accountId, defaultOpen }: { group: PostGroup; ac
         onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = "#f8fafc"}
       >
         {/* Thumbnail */}
-        {group.thumbnail ? (
+        {group.thumbnail && !thumbError ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={group.thumbnail} alt="" referrerPolicy="no-referrer" style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover", flexShrink: 0, border: "1px solid #e2e8f0" }} />
+          <img src={group.thumbnail} alt="" referrerPolicy="no-referrer" onError={() => setThumbError(true)} style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover", flexShrink: 0, border: "1px solid #e2e8f0" }} />
         ) : (
           <div style={{ width: 48, height: 48, borderRadius: 8, background: "#e2e8f0", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9l4-4 4 4 4-4 4 4"/></svg>

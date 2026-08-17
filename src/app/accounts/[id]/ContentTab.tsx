@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from "react";
 import type { ReplizContent } from "@/lib/repliz";
 
 type Props = {
@@ -25,6 +26,7 @@ function ContentCard({ content }: { content: ReplizContent }) {
   const date = content.createdAt
     ? new Date(content.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
     : "";
+  const [thumbError, setThumbError] = useState(false);
 
   return (
     <div style={{
@@ -34,12 +36,13 @@ function ContentCard({ content }: { content: ReplizContent }) {
     }}>
       {/* Thumbnail */}
       <div style={{ position: "relative", aspectRatio: "1", background: "#f1f5f9", overflow: "hidden" }}>
-        {thumbnail ? (
+        {thumbnail && !thumbError ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={thumbnail}
             alt={caption?.slice(0, 50) ?? content.type}
             referrerPolicy="no-referrer"
+            onError={() => setThumbError(true)}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
         ) : (

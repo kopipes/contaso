@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { verifySession } from "@/lib/dal";
 import { db } from "@/lib/db";
-import { listAccounts, getAccountStats, getComments, listChats, getContent, fetchAllPages, ReplizChat, ReplizComment, ReplizContent } from "@/lib/repliz";
+import { listAccounts, getAccountStats, getComments, listChats, fetchAllPages, fetchAllContent, ReplizChat, ReplizComment, ReplizContent } from "@/lib/repliz";
 
 export async function syncAction(): Promise<{ success: boolean; message: string }> {
   const session = await verifySession();
@@ -31,7 +31,7 @@ export async function syncAction(): Promise<{ success: boolean; message: string 
           getAccountStats(acc._id),
           fetchAllPages<ReplizComment>((p, l) => getComments(acc._id, "pending", p, l), 100, 500),
           fetchAllPages<ReplizChat>((p, l) => listChats(acc._id, p, l), 100, 500),
-          fetchAllPages<ReplizContent>((p, l) => getContent(acc._id, p, l), 50, 200),
+          fetchAllContent(acc._id, 500),
         ]);
 
         if (statsResult.status === "fulfilled") {

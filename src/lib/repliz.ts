@@ -269,15 +269,20 @@ export async function sendMessage(chatId: string, text: string): Promise<void> {
 
 // ── Content endpoints ─────────────────────────────────────────────────────────
 
-/** Get content/posts for an account */
+/** Cursor-based paginated response (used by Content API) */
+type CursorPaginatedResponse<T> = {
+  docs: T[];
+  nextToken?: string;
+};
+
+/** Get content/posts for an account — uses cursor-based pagination (nextToken) */
 export async function getContent(
   accountId: string,
-  page = 1,
-  limit = 50
-): Promise<PaginatedResponse<ReplizContent>> {
-  return replizFetch<PaginatedResponse<ReplizContent>>("/content", {
-    params: { accountId, page, limit },
-  });
+  nextToken?: string
+): Promise<CursorPaginatedResponse<ReplizContent>> {
+  const params: Record<string, string> = { accountId };
+  if (nextToken) params.nextToken = nextToken;
+  return replizFetch<CursorPaginatedResponse<ReplizContent>>("/content", { params });
 }
 
 // ── Pagination helper ─────────────────────────────────────────────────────────
@@ -298,6 +303,23 @@ export async function fetchAllPages<T>(
     hasMore = result.hasNextPage;
     page++;
   }
+
+  return all;
+}
+
+/** Fetch all content pages using cursor-based pagination (nextToken) */
+export async function fetchAllContent(
+  accountId: string,
+  maxItems = 500
+): Promise<ReplizContent[]> {
+  const all: ReplizContent[] = [];
+  let nextToken: string | undefined;
+
+  do {
+    const result = await getContent(accountId, nextToken);
+    all.push(...result.docs);
+    nextToken = result.nextToken;
+  } while (nextToken && all.length < maxItems);
 
   return all;
 }

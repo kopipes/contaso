@@ -15,6 +15,10 @@ type Props = {
 function MessageBubble({ msg }: { msg: ReplizMessage }) {
   const isMe = msg.isFromMe;
   const [imgOpen, setImgOpen] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const [imgFullError, setImgFullError] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+  const [igPostError, setIgPostError] = useState(false);
 
   return (
     <div style={{
@@ -38,23 +42,38 @@ function MessageBubble({ msg }: { msg: ReplizMessage }) {
         {/* Image message */}
         {msg.type === "image" && msg.image && (
           <div style={{ marginBottom: msg.text ? 4 : 0 }}>
-            <button
-              onClick={() => setImgOpen(true)}
-              style={{ padding: 0, border: "none", background: "none", cursor: "pointer" }}
-              title="Lihat gambar"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={msg.image.thumbnail || msg.image.url}
-                alt="Gambar"
-                referrerPolicy="no-referrer"
-                style={{
-                  maxWidth: 220, maxHeight: 220, borderRadius: 10,
-                  objectFit: "cover", display: "block",
-                  border: "1px solid #e2e8f0",
-                }}
-              />
-            </button>
+            {imgError ? (
+              <div style={{
+                padding: "12px 16px", borderRadius: 10,
+                background: "#f8fafc", border: "1px dashed #e2e8f0",
+                display: "flex", alignItems: "center", gap: 8,
+                maxWidth: 220,
+              }}>
+                <span style={{ fontSize: 20 }}>🖼️</span>
+                <span style={{ fontSize: 12, color: "#94a3b8" }}>
+                  Gambar tidak tersedia lagi
+                </span>
+              </div>
+            ) : (
+              <button
+                onClick={() => setImgOpen(true)}
+                style={{ padding: 0, border: "none", background: "none", cursor: "pointer" }}
+                title="Lihat gambar"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={msg.image.thumbnail || msg.image.url}
+                  alt="Gambar"
+                  referrerPolicy="no-referrer"
+                  onError={() => setImgError(true)}
+                  style={{
+                    maxWidth: 220, maxHeight: 220, borderRadius: 10,
+                    objectFit: "cover", display: "block",
+                    border: "1px solid #e2e8f0",
+                  }}
+                />
+              </button>
+            )}
             {/* Lightbox */}
             {imgOpen && (
               <div
@@ -66,25 +85,38 @@ function MessageBubble({ msg }: { msg: ReplizMessage }) {
                   cursor: "zoom-out",
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={msg.image.url}
-                  alt="Gambar penuh"
-                  referrerPolicy="no-referrer"
-                  style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: 8, objectFit: "contain" }}
-                />
+                {imgFullError ? (
+                  <div style={{
+                    padding: "24px 32px", borderRadius: 12,
+                    background: "rgba(255,255,255,0.08)",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+                  }}>
+                    <span style={{ fontSize: 40 }}>🖼️</span>
+                    <span style={{ fontSize: 14, color: "#94a3b8" }}>Gambar tidak tersedia lagi</span>
+                  </div>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={msg.image.url}
+                    alt="Gambar penuh"
+                    referrerPolicy="no-referrer"
+                    onError={() => setImgFullError(true)}
+                    style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: 8, objectFit: "contain" }}
+                  />
+                )}
               </div>
             )}
           </div>
         )}
 
         {/* Video message */}
-        {msg.type === "video" && msg.video && (
+        {msg.type === "video" && msg.video && !videoError && (
           <div style={{ marginBottom: msg.text ? 4 : 0, position: "relative" }}>
             <video
               src={msg.video.url}
               poster={msg.video.thumbnail}
               controls
+              onError={() => setVideoError(true)}
               style={{
                 maxWidth: 280, maxHeight: 200, borderRadius: 10,
                 display: "block", border: "1px solid #e2e8f0",
@@ -103,9 +135,53 @@ function MessageBubble({ msg }: { msg: ReplizMessage }) {
             )}
           </div>
         )}
+        {msg.type === "video" && msg.video && videoError && (
+          <div style={{
+            marginBottom: msg.text ? 4 : 0,
+            padding: "12px 16px", borderRadius: 10,
+            background: "#f8fafc", border: "1px dashed #e2e8f0",
+            display: "flex", alignItems: "center", gap: 8,
+            maxWidth: 280,
+          }}>
+            <span style={{ fontSize: 20 }}>🎬</span>
+            <span style={{ fontSize: 12, color: "#94a3b8" }}>
+              Video tidak tersedia lagi
+            </span>
+          </div>
+        )}
 
-        {/* ig_post / share */}
-        {(msg.type === "ig_post" || msg.type === "share") && (
+        {/* ig_post / share — show thumbnail if available */}
+        {(msg.type === "ig_post" || msg.type === "share") && msg.ig_post?.thumbnail && (
+          <div style={{ marginBottom: msg.text ? 4 : 0 }}>
+            {igPostError ? (
+              <div style={{
+                padding: "8px 12px", borderRadius: 10,
+                background: isMe ? "#eef2ff" : "#f8fafc",
+                border: "1px solid #e2e8f0",
+                display: "flex", alignItems: "center", gap: 6,
+              }}>
+                <span style={{ fontSize: 16 }}>{msg.type === "ig_post" ? "📱" : "↗️"}</span>
+                <span style={{ fontSize: 12, color: "#64748b" }}>
+                  {msg.type === "ig_post" ? "Membagikan sebuah post" : "Berbagi konten"}
+                </span>
+              </div>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={msg.ig_post.thumbnail}
+                alt="Post yang dibagikan"
+                referrerPolicy="no-referrer"
+                onError={() => setIgPostError(true)}
+                style={{
+                  maxWidth: 220, maxHeight: 220, borderRadius: 10,
+                  objectFit: "cover", display: "block",
+                  border: "1px solid #e2e8f0",
+                }}
+              />
+            )}
+          </div>
+        )}
+        {(msg.type === "ig_post" || msg.type === "share") && !msg.ig_post?.thumbnail && (
           <div style={{
             marginBottom: msg.text ? 4 : 0,
             padding: "8px 12px", borderRadius: 10,

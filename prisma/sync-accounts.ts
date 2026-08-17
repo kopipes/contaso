@@ -8,6 +8,7 @@ const adapter = new PrismaBetterSqlite3({ url });
 const db = new PrismaClient({ adapter });
 
 type PaginatedResponse<T> = { docs: T[]; hasNextPage: boolean; totalDocs: number };
+type CursorPaginatedResponse<T> = { docs: T[]; nextToken?: string };
 
 async function replizFetch<T>(path: string, auth: string): Promise<T> {
   const res = await fetch(`https://api.repliz.com/public${path}`, {
@@ -17,7 +18,7 @@ async function replizFetch<T>(path: string, auth: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-/** Fetch all pages up to maxItems */
+/** Fetch all pages up to maxItems (standard page/limit pagination) */
 async function fetchAllPages<T>(
   buildPath: (page: number, limit: number) => string,
   auth: string,
@@ -33,6 +34,26 @@ async function fetchAllPages<T>(
     hasMore = result.hasNextPage;
     page++;
   }
+  return all;
+}
+
+/** Fetch all content pages using cursor-based pagination (nextToken) */
+// NOTE: Source of truth for this logic is fetchAllContent() in src/lib/repliz.ts
+async function fetchAllContent<T>(
+  accountId: string,
+  auth: string,
+  maxItems = 500
+): Promise<T[]> {
+  const all: T[] = [];
+  let nextToken: string | undefined;
+  do {
+    const path = nextToken
+      ? `/content?accountId=${accountId}&nextToken=${encodeURIComponent(nextToken)}`
+      : `/content?accountId=${accountId}`;
+    const result = await replizFetch<CursorPaginatedResponse<T>>(path, auth);
+    all.push(...result.docs);
+    nextToken = result.nextToken;
+  } while (nextToken && all.length < maxItems);
   return all;
 }
 
@@ -62,7 +83,7 @@ async function main() {
         create: { replizId: acc._id, name: acc.name, platform, isVisible: true, sortOrder: i },
       });
 
-      // Fetch stats, comments, chats (all pages), content (all pages) in parallel
+      // Fetch stats, comments, chats (all pages), content (cursor pagination) in parallel
       const [statsResult, commentsResult, chatsResult, contentResult] = await Promise.allSettled([
         replizFetch<Record<string, unknown>>(`/account/${acc._id}/statistic`, auth),
         fetchAllPages<unknown>(
@@ -73,10 +94,7 @@ async function main() {
           (p, l) => `/chat?accountIds[]=${acc._id}&page=${p}&limit=${l}`,
           auth, 100, 500
         ),
-        fetchAllPages<unknown>(
-          (p, l) => `/content?accountId=${acc._id}&page=${p}&limit=${l}`,
-          auth, 50, 200
-        ),
+        fetchAllContent<unknown>(acc._id, auth, 500),
       ]);
 
       if (statsResult.status === "fulfilled") {
