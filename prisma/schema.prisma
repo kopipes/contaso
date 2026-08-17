@@ -1,0 +1,90 @@
+// Contaso – Prisma schema (SQLite, portable to Postgres/MySQL)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  ADMIN
+  AGENT
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  name         String
+  role         Role       @default(AGENT)
+  createdAt    DateTime   @default(now())
+  replyLogs    ReplyLog[]
+}
+
+model TrackedAccount {
+  id            String         @id @default(cuid())
+  replizId      String         @unique
+  name          String
+  platform      String
+  isVisible     Boolean        @default(true)
+  sortOrder     Int            @default(0)
+  createdAt     DateTime       @default(now())
+  replyLogs     ReplyLog[]
+  statsCache    StatsCache?
+  commentsCache CommentsCache?
+  chatsCache    ChatsCache?
+  contentCache  ContentCache?
+}
+
+// Cached stats from Repliz — refreshed on every sync run
+model StatsCache {
+  id               String         @id @default(cuid())
+  trackedAccountId String         @unique
+  trackedAccount   TrackedAccount @relation(fields: [trackedAccountId], references: [id])
+  data             String         // JSON string
+  cachedAt         DateTime       @default(now())
+}
+
+// Cached pending comments — refreshed on every sync run
+model CommentsCache {
+  id               String         @id @default(cuid())
+  trackedAccountId String         @unique
+  trackedAccount   TrackedAccount @relation(fields: [trackedAccountId], references: [id])
+  data             String         // JSON array string
+  cachedAt         DateTime       @default(now())
+}
+
+// Cached chats — refreshed on every sync run
+model ChatsCache {
+  id               String         @id @default(cuid())
+  trackedAccountId String         @unique
+  trackedAccount   TrackedAccount @relation(fields: [trackedAccountId], references: [id])
+  data             String         // JSON array string
+  cachedAt         DateTime       @default(now())
+}
+
+// Cached content/posts — refreshed on every sync run
+model ContentCache {
+  id               String         @id @default(cuid())
+  trackedAccountId String         @unique
+  trackedAccount   TrackedAccount @relation(fields: [trackedAccountId], references: [id])
+  data             String         // JSON array string
+  cachedAt         DateTime       @default(now())
+}
+
+model ReplyLog {
+  id               String         @id @default(cuid())
+  trackedAccountId String
+  trackedAccount   TrackedAccount @relation(fields: [trackedAccountId], references: [id])
+  userId           String
+  user             User           @relation(fields: [userId], references: [id])
+  // "comment" | "chat"
+  type             String
+  // External ID of the comment or conversation from Repliz
+  externalId       String
+  body             String
+  createdAt        DateTime       @default(now())
+}
