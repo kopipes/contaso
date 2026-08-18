@@ -26,7 +26,7 @@ export default async function SettingsAccountsPage() {
       <div className="main-shell" style={{ flex: 1 }}>
         <header className="page-header">
           <div>
-            <h1 style={{ fontSize: 16, fontWeight: 600, color: "#0f172a", margin: 0 }}>Kelola Akun Repliz</h1>
+            <h1 style={{ fontSize: 16, fontWeight: 600, color: "#0f172a", margin: 0 }}>Kelola Akun Sosial Media</h1>
             <p style={{ fontSize: 12, color: "#94a3b8", margin: 0, marginTop: 1 }}>
               Hubungkan atau putuskan akun Instagram, Facebook, dan Threads
             </p>

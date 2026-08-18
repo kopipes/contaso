@@ -47,7 +47,7 @@ const NAV_ITEMS = [
   },
   {
     href: "/settings/accounts",
-    label: "Akun Repliz",
+    label: "Akun Sosial Media",
     description: "Hubungkan akun sosial media",
     adminOnly: true,
     icon: (
