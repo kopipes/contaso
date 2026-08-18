@@ -143,6 +143,44 @@ export async function connectFacebookAction(
   }
 }
 
+export async function addToContasoAction(
+  replizId: string,
+  name: string,
+  platform: string
+): Promise<{ success?: boolean; error?: string }> {
+  const session = await verifySession();
+  if (session.role !== "ADMIN") return { error: "Hanya admin" };
+
+  try {
+    await db.trackedAccount.upsert({
+      where: { replizId },
+      update: { name, platform, isVisible: true },
+      create: { replizId, name, platform, isVisible: true, sortOrder: 0 },
+    });
+    revalidatePath("/settings/accounts");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch {
+    return { error: "Gagal menambahkan akun ke Contaso" };
+  }
+}
+
+export async function removeFromContasoAction(
+  trackedAccountId: string
+): Promise<{ success?: boolean; error?: string }> {
+  const session = await verifySession();
+  if (session.role !== "ADMIN") return { error: "Hanya admin" };
+
+  try {
+    await db.trackedAccount.delete({ where: { id: trackedAccountId } });
+    revalidatePath("/settings/accounts");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch {
+    return { error: "Gagal menghapus akun dari Contaso" };
+  }
+}
+
 export async function disconnectAccountAction(
   trackedAccountId: string,
   replizAccountId: string
