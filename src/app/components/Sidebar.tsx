@@ -45,13 +45,27 @@ const NAV_ITEMS = [
       </svg>
     ),
   },
+  {
+    href: "/settings/accounts",
+    label: "Akun Repliz",
+    description: "Hubungkan akun sosial media",
+    adminOnly: true,
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
+        <path d="M15.54 8.46a5 5 0 010 7.07M8.46 8.46a5 5 0 000 7.07"/>
+      </svg>
+    ),
+  },
 ];
 
 export default function Sidebar({ session }: Props) {
   const pathname = usePathname();
 
   const isActive = (href: string) => {
-    if (href === "/accounts") return pathname.startsWith("/accounts");
+    if (href === "/accounts") return pathname.startsWith("/accounts") && !pathname.startsWith("/accounts/settings");
+    if (href === "/settings/accounts") return pathname.startsWith("/settings/accounts");
+    if (href === "/settings/users") return pathname === "/settings/users";
     return pathname === href;
   };
 

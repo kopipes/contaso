@@ -323,3 +323,74 @@ export async function fetchAllContent(
 
   return all;
 }
+
+// ── Account management (OAuth connect/disconnect) ─────────────────────────────
+
+export type ReplizFacebookPage = {
+  id: string;
+  name: string;
+  picture?: string;
+};
+
+/** List all accounts in Repliz */
+export async function listReplizAccounts(): Promise<ReplizAccount[]> {
+  const result = await replizFetch<PaginatedResponse<ReplizAccount>>("/account", {
+    params: { limit: 100 },
+  });
+  return result.docs;
+}
+
+/** Get OAuth authorize URL for a platform */
+export async function authorizeReplizAccount(
+  platform: "instagram" | "facebook" | "threads",
+  redirectUrl: string
+): Promise<{ url: string }> {
+  return replizFetch<{ url: string }>(`/account/${platform}/authorize`, {
+    params: { redirect: redirectUrl },
+  });
+}
+
+/** Connect Instagram account with OAuth code */
+export async function connectInstagram(code: string): Promise<ReplizAccount> {
+  return replizFetch<ReplizAccount>("/account/instagram/connect", {
+    method: "POST",
+    body: { code },
+  });
+}
+
+/** Connect Threads account with OAuth code */
+export async function connectThreads(code: string): Promise<ReplizAccount> {
+  return replizFetch<ReplizAccount>("/account/threads/connect", {
+    method: "POST",
+    body: { code },
+  });
+}
+
+/** Exchange Facebook OAuth code for token */
+export async function exchangeFacebook(code: string): Promise<{ token: string }> {
+  return replizFetch<{ token: string }>("/account/facebook/exchange", {
+    method: "POST",
+    body: { code },
+  });
+}
+
+/** Get Facebook pages from token */
+export async function getFacebookPages(token: string): Promise<ReplizFacebookPage[]> {
+  const result = await replizFetch<{ pages: ReplizFacebookPage[] }>("/account/facebook/page", {
+    params: { token },
+  });
+  return result.pages;
+}
+
+/** Connect Facebook page */
+export async function connectFacebook(pageId: string, token: string): Promise<ReplizAccount> {
+  return replizFetch<ReplizAccount>("/account/facebook/connect", {
+    method: "POST",
+    body: { pageId, token },
+  });
+}
+
+/** Remove/disconnect a Repliz account */
+export async function removeReplizAccount(replizAccountId: string): Promise<void> {
+  await replizFetch<unknown>(`/account/${replizAccountId}`, { method: "DELETE" });
+}
