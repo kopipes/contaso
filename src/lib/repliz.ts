@@ -335,7 +335,7 @@ export type ReplizFacebookPage = {
 /** List all accounts in Repliz */
 export async function listReplizAccounts(): Promise<ReplizAccount[]> {
   const result = await replizFetch<PaginatedResponse<ReplizAccount>>("/account", {
-    params: { limit: 100 },
+    params: { page: 1, limit: 100 },
   });
   return result.docs;
 }
